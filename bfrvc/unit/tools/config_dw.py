@@ -104,7 +104,7 @@ def download_mapping_files(file_mapping_list, global_bar):
                 logging.error(f"Error in download thread: {error}")
 
 
-def calculate_total_size(pretraineds_hifigan, models, exe):
+def calculate_total_size(models, exe):
     """
     Calculate the total size of all files to be downloaded based on selected categories.
 
@@ -136,7 +136,7 @@ def model_need(models, exe):
         str: Status message indicating completion or error.
     """
     try:
-        total_size = calculate_total_size(pretraineds_hifigan, models, exe)
+        total_size = calculate_total_size(models, exe)
         if total_size == 0:
             logging.info("All prerequisites are already downloaded.")
             return "All prerequisites are already downloaded."
