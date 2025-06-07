@@ -123,7 +123,7 @@ def calculate_total_size(pretraineds_hifigan, models, exe):
         total_size += get_file_size_if_missing(executables_list)
     return total_size
 
-def prequisites_dw(models, exe):
+def model_need(models, exe):
   
     """
     Manage the download pipeline for different categories of files.
