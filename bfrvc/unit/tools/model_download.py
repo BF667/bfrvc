@@ -8,8 +8,8 @@ from urllib.parse import unquote
 from tqdm import tqdm
 import logging
 
-from bfrvc.units.utils import format_title
-from bfrvc.units.tools import gdown
+from bfrvc.unit.utils import format_title
+from bfrvc.unit.tools import gdown
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
