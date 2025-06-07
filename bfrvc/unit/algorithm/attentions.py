@@ -1,6 +1,6 @@
 import math
 import torch
-from bfrvc.lib.algorithm.commons import convert_pad_shape
+from bfrvc.unit.algorithm.commons import convert_pad_shape
 
 
 class MultiHeadAttention(torch.nn.Module):
