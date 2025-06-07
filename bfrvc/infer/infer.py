@@ -11,17 +11,17 @@ import torch
 from tempfile import gettempdir
 
 from bfrvc.configs.config import Config
-from bfrvc.units.utils import load_audio_infer, load_embedding
-from bfrvc.units.tools.split_audio import process_audio, merge_audio
-from bfrvc.units.pipeline import Pipeline
-from bfrvc.units.algorithm.synthesizers import Synthesizer
+from bfrvc.unit.utils import load_audio_infer, load_embedding
+from bfrvc.unit.tools.split_audio import process_audio, merge_audio
+from bfrvc.unit.pipeline import Pipeline
+from bfrvc.unit.algorithm.synthesizers import Synthesizer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-# logging.getLogger("httpx").setLevel(logging.WARNING)
-# logging.getLogger("httpcore").setLevel(logging.WARNING)
-# logging.getLogger("faiss").setLevel(logging.WARNING)
-# logging.getLogger("faiss.loader").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("faiss").setLevel(logging.WARNING)
+logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
 # Base path for temporary files
 base_path = os.path.expanduser("~/.bfrvc")
