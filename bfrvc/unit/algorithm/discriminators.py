@@ -2,8 +2,8 @@ import torch
 from torch.utils.checkpoint import checkpoint
 from torch.nn.utils.parametrizations import spectral_norm, weight_norm
 
-from bfrvc.lib.algorithm.commons import get_padding
-from bfrvc.lib.algorithm.residuals import LRELU_SLOPE
+from bfrvc.unit.algorithm.commons import get_padding
+from bfrvc.unit.algorithm.residuals import LRELU_SLOPE
 
 
 class MultiPeriodDiscriminator(torch.nn.Module):
