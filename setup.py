@@ -24,7 +24,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence"
     ],
     python_requires=">=3.8,<3.12",
-    packages=find_packages(include=["bfrvc"]),
+    packages=find_packages(),
     install_requires=[
         "numpy>=1.26.4",
         "requests>=2.31.0,<2.32.0",
@@ -57,6 +57,7 @@ setup(
         "pypresence>=4.3.0",
         "beautifulsoup4>=4.12.2"
     ],
+    include_package_data=True,
     extras_require={
         "plotting": ["matplotlib>=3.7.2"]
     },
