@@ -1,12 +1,12 @@
 import torch
 from typing import Optional
-from bfrvc.lib.algorithm.generators.hifigan_mrf import HiFiGANMRFGenerator
-from bfrvc.lib.algorithm.generators.hifigan_nsf import HiFiGANNSFGenerator
-from bfrvc.lib.algorithm.generators.hifigan import HiFiGANGenerator
-from bfrvc.lib.algorithm.generators.refinegan import RefineGANGenerator
-from bfrvc.lib.algorithm.commons import slice_segments, rand_slice_segments
-from bfrvc.lib.algorithm.residuals import ResidualCouplingBlock
-from bfrvc.lib.algorithm.encoders import TextEncoder, PosteriorEncoder
+from bfrvc.unit.algorithm.generators.hifigan_mrf import HiFiGANMRFGenerator
+from bfrvc.unit.algorithm.generators.hifigan_nsf import HiFiGANNSFGenerator
+from bfrvc.unit.algorithm.generators.hifigan import HiFiGANGenerator
+from bfrvc.unit.algorithm.generators.refinegan import RefineGANGenerator
+from bfrvc.unit.algorithm.commons import slice_segments, rand_slice_segments
+from bfrvc.unit.algorithm.residuals import ResidualCouplingBlock
+from bfrvc.unit.algorithm.encoders import TextEncoder, PosteriorEncoder
 
 
 class Synthesizer(torch.nn.Module):
