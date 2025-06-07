@@ -168,11 +168,10 @@ def run_download_script(model_link: str):
 
 # Prerequisites
 def run_prerequisites_script(
-    pretraineds_hifigan: bool,
     models: bool,
     exe: bool,
 ):
-    model_need(pretraineds_hifigan, models, exe)
+    model_need(models, exe)
     return "Prerequisites installed successfully."
 
 # Parse arguments
