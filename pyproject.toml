@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bfrvc"
-version = "0.2.1"
+version = "0.3.1"
 description = "A Retrieval-based Voice Conversion (RVC) and Text-to-Speech (TTS) tool"
 readme = "README.md"
 requires-python = ">=3.8,<3.12"
