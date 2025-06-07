@@ -13,8 +13,8 @@ os.path.expanduser("~/.bfrvc")
 
 
 # Package imports
-from bfrvc.lib.tools.config_dw import model_need
-from bfrvc.lib.tools.model_download import model_download
+from bfrvc.unit.tools.config_dw import model_need
+from bfrvc.unit.tools.model_download import model_download
 
 
 
