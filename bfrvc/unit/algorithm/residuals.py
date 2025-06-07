@@ -4,8 +4,8 @@ from typing import Optional, Tuple
 from torch.nn.utils import remove_weight_norm
 from torch.nn.utils.parametrizations import weight_norm
 
-from bfrvc.lib.algorithm.modules import WaveNet
-from bfrvc.lib.algorithm.commons import get_padding, init_weights
+from bfrvc.unit.algorithm.modules import WaveNet
+from bfrvc.unit.algorithm.commons import get_padding, init_weights
 
 LRELU_SLOPE = 0.1
 
