@@ -7,9 +7,17 @@ from functools import lru_cache
 from distutils.util import strtobool
 import pkg_resources
 
+
+os.path.expanduser("~/.bfrvc")
+
+
+
 # Package imports
 from bfrvc.lib.tools.config_dw import model_need
 from bfrvc.lib.tools.model_download import model_download
+
+
+
 
 python = sys.executable
 
