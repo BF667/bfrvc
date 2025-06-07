@@ -8,8 +8,8 @@ from distutils.util import strtobool
 import pkg_resources
 
 # Package imports
-from bfrvc.lib.tools.prerequisites_download import prequisites_download_pipeline
-from bfrvc.lib.tools.model_download import model_download_pipeline
+from bfrvc.lib.tools.config_dw import model_need
+from bfrvc.lib.tools.model_download import model_download
 
 python = sys.executable
 
@@ -219,7 +219,7 @@ def run_tts_script(
 
 # Download
 def run_download_script(model_link: str):
-    model_download_pipeline(model_link)
+    model_download(model_link)
     return "Model downloaded successfully."
 
 # Prerequisites
@@ -228,7 +228,7 @@ def run_prerequisites_script(
     models: bool,
     exe: bool,
 ):
-    prequisites_download_pipeline(pretraineds_hifigan, models, exe)
+    model_need(pretraineds_hifigan, models, exe)
     return "Prerequisites installed successfully."
 
 # Parse arguments
