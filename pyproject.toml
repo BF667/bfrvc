@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bfrvc"
+version = "0.1.0"
+description = "A Retrieval-based Voice Conversion (RVC) and TTS tool"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "BF667", email = "festyus09@gmail.com"}
+]
+dependencies = [
+    "numpy>=1.21.0",
+    "torch>=1.9.0",
+    "librosa>=0.9.0",
+    "soundfile>=0.10.0",
+    "pysoundfile>=0.10.0",
+    "pysox>=0.5.0",
+    "transformers>=4.20.0",
+    "wget>=3.2",
+    "stftpitchshift>=1.4.1",
+    "requests>=2.25.0",
+    "beautifulsoup4>=4.9.0",
+    "tqdm>=4.60.0",
+    "gdown>=4.7.0",
+    "resampy>=0.4.0",
+    "torchcrepe>=0.0.17",
+    "torchfcpe>=0.0.6",
+    "setuptools>=61.0",
+    "faiss-cpu>=1.7.2",
+    "scipy>=1.7.0",
+    "soxr>=0.3.0",
+    "noisereduce>=2.0.0",
+    "pedalboard>=0.7.0",
+]
+optional-dependencies = {
+    "plotting" = ["matplotlib>=3.5.0"]
+}
+keywords = ["voice-conversion", "tts", "audio-processing", "rvc"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+bfrvc = "bfrvc.core:main"
