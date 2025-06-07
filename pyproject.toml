@@ -45,7 +45,7 @@ dependencies = [
     "torchaudio==2.7.0",
     "torchvision>=0.17.0",
     "torchcrepe==0.0.23",
-    "torchfcpe>=0.0.7",
+    "torchfcpe",
     "einops>=0.7.0",
     "transformers==4.44.2",
     "matplotlib==3.7.2",
