@@ -7,42 +7,68 @@ from functools import lru_cache
 from distutils.util import strtobool
 import pkg_resources
 
-
-os.path.expanduser("~/.bfrvc")
-
-
+# Define and ensure configuration directory exists
+CONFIG_DIR = os.path.expanduser("~/.bfrvc")
+os.makedirs(CONFIG_DIR, exist_ok=True)
 
 # Package imports
-from bfrvc.unit.tools.config_dw import model_need
-from bfrvc.unit.tools.model_download import model_download
-
-
-
+try:
+    from bfrvc.unit.tools.config_dw import model_need
+    from bfrvc.unit.tools.model_download import model_download
+except ImportError as e:
+    print(f"Error importing bfrvc modules: {e}")
+    sys.exit(1)
 
 python = sys.executable
 
-# Load tts_voices.json from package resources
+# Load tts_voices.json from package resources with fallback
 @lru_cache(maxsize=1)
 def load_voices_data():
     try:
+        # Attempt to load from package resources
         resource_path = pkg_resources.resource_filename('bfrvc.unit.tools', 'tts_voices.json')
+        if not os.path.exists(resource_path):
+            raise FileNotFoundError(f"tts_voices.json not found at {resource_path}")
         with open(resource_path, 'r', encoding='utf-8') as file:
             return json.load(file)
+    except FileNotFoundError as e:
+        # Fallback to a default location or exit gracefully
+        fallback_path = os.path.join(CONFIG_DIR, 'tts_voices.json')
+        if os.path.exists(fallback_path):
+            with open(fallback_path, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        else:
+            print(f"Error: Could not load tts_voices.json from {resource_path} or {fallback_path}. Please ensure the file exists.")
+            sys.exit(1)
     except Exception as e:
-        raise FileNotFoundError(f"Could not load tts_voices.json: {e}")
+        print(f"Unexpected error loading tts_voices.json: {e}")
+        sys.exit(1)
 
-voices_data = load_voices_data()
-locales = list({voice["ShortName"] for voice in voices_data})
+# Load voices data and extract locales
+try:
+    voices_data = load_voices_data()
+    locales = list({voice.get("ShortName", "") for voice in voices_data if voice.get("ShortName")})
+except Exception as e:
+    print(f"Failed to initialize voices data: {e}")
+    sys.exit(1)
 
 @lru_cache(maxsize=None)
 def import_voice_converter():
-    from bfrvc.infer.infer import VoiceConverter
-    return VoiceConverter()
+    try:
+        from bfrvc.infer.infer import VoiceConverter
+        return VoiceConverter()
+    except ImportError as e:
+        print(f"Error importing VoiceConverter: {e}")
+        sys.exit(1)
 
 @lru_cache(maxsize=1)
 def get_config():
-    from bfrvc.configs.config import Config
-    return Config()
+    try:
+        from bfrvc.configs.config import Config
+        return Config()
+    except ImportError as e:
+        print(f"Error importing Config: {e}")
+        sys.exit(1)
 
 # Infer
 def run_infer_script(
@@ -66,10 +92,16 @@ def run_infer_script(
     embedder_model: str,
     embedder_model_custom: str = None,
     sid: int = 0,
-    formant_shifting: bool = False,
-    formant_qfrency: float = 1.0,
-    formant_timbre: float = 1.0,
 ):
+    # Validate input/output paths
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"Input audio file not found: {input_path}")
+    if not os.path.exists(pth_path):
+        raise FileNotFoundError(f"Model file not found: {pth_path}")
+    if not os.path.exists(index_path):
+        raise FileNotFoundError(f"Index file not found: {index_path}")
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+
     kwargs = {
         "audio_input_path": input_path,
         "audio_output_path": output_path,
@@ -91,9 +123,6 @@ def run_infer_script(
         "embedder_model": embedder_model,
         "embedder_model_custom": embedder_model_custom,
         "sid": sid,
-        "formant_shifting": formant_shifting,
-        "formant_qfrency": formant_qfrency,
-        "formant_timbre": formant_timbre,
     }
     infer_pipeline = import_voice_converter()
     infer_pipeline.convert_audio(**kwargs)
@@ -123,10 +152,16 @@ def run_batch_infer_script(
     embedder_model: str,
     embedder_model_custom: str = None,
     sid: int = 0,
-    formant_shifting: bool = False,
-    formant_qfrency: float = 1.0,
-    formant_timbre: float = 1.0,
 ):
+    # Validate input/output folders
+    if not os.path.isdir(input_folder):
+        raise NotADirectoryError(f"Input folder not found: {input_folder}")
+    if not os.path.exists(pth_path):
+        raise FileNotFoundError(f"Model file not found: {pth_path}")
+    if not os.path.exists(index_path):
+        raise FileNotFoundError(f"Index file not found: {index_path}")
+    os.makedirs(output_folder, exist_ok=True)
+
     kwargs = {
         "audio_input_paths": input_folder,
         "audio_output_path": output_folder,
@@ -148,9 +183,6 @@ def run_batch_infer_script(
         "embedder_model": embedder_model,
         "embedder_model_custom": embedder_model_custom,
         "sid": sid,
-        "formant_shifting": formant_shifting,
-        "formant_qfrency": formant_qfrency,
-        "formant_timbre": formant_timbre,
     }
     infer_pipeline = import_voice_converter()
     infer_pipeline.convert_audio_batch(**kwargs)
@@ -183,7 +215,23 @@ def run_tts_script(
     embedder_model_custom: str = None,
     sid: int = 0,
 ):
-    tts_script_path = pkg_resources.resource_filename('bfrvc.lib.tools', 'tts.py')
+    # Validate paths
+    if not os.path.exists(tts_file):
+        raise FileNotFoundError(f"TTS input file not found: {tts_file}")
+    if not os.path.exists(pth_path):
+        raise FileNotFoundError(f"Model file not found: {pth_path}")
+    if not os.path.exists(index_path):
+        raise FileNotFoundError(f"Index file not found: {index_path}")
+    os.makedirs(os.path.dirname(output_tts_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(output_rvc_path) or ".", exist_ok=True)
+
+    try:
+        tts_script_path = pkg_resources.resource_filename('bfrvc.lib.tools', 'tts.py')
+        if not os.path.exists(tts_script_path):
+            raise FileNotFoundError(f"TTS script not found: {tts_script_path}")
+    except Exception as e:
+        print(f"Error locating tts.py: {e}")
+        sys.exit(1)
 
     if os.path.exists(output_tts_path):
         os.remove(output_tts_path)
@@ -267,13 +315,13 @@ def parse_arguments():
     index_path_description = "Full path to the index file (.index)."
     infer_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
     split_audio_description = "Split the audio into smaller segments before inference."
-    infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=split_audio_description, default=False)
+    infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=split_audio_description, default=False)
     f0_autotune_description = "Apply a light autotune to the inferred audio."
-    infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x)), choices=[True, False], help=f0_autotune_description, default=False)
+    infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=f0_autotune_description, default=False)
     f0_autotune_strength_description = "Set the autotune strength."
     infer_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
     clean_audio_description = "Clean the output audio using noise reduction algorithms."
-    infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=clean_audio_description, default=False)
+    infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=clean_audio_description, default=False)
     clean_strength_description = "Adjust the intensity of the audio cleaning process."
     infer_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
     export_format_description = "Select the desired output audio format."
@@ -285,12 +333,6 @@ def parse_arguments():
     infer_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
     f0_file_description = "Full path to an external F0 file (.f0)."
     infer_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
-    formant_shifting_description = "Apply formant shifting to the input audio."
-    infer_parser.add_argument("--formant_shifting", type=lambda x: bool(strtobool(x)), choices=[True, False], help=formant_shifting_description, default=False)
-    formant_qfrency_description = "Control the frequency of the formant shifting effect."
-    infer_parser.add_argument("--formant_qfrency", type=float, help=formant_qfrency_description, default=1.0)
-    formant_timbre_description = "Control the timbre of the formant shifting effect."
-    infer_parser.add_argument("--formant_timbre", type=float, help=formant_timbre_description, default=1.0)
     sid_description = "Speaker ID for multi-speaker models."
     infer_parser.add_argument("--sid", type=int, help=sid_description, default=0)
 
@@ -308,19 +350,16 @@ def parse_arguments():
     batch_infer_parser.add_argument("--output_folder", type=str, help="Path to the folder for saving output audio files.", required=True)
     batch_infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
     batch_infer_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
-    batch_infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=split_audio_description, default=False)
-    batch_infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x)), choices=[True, False], help=f0_autotune_description, default=False)
+    batch_infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=split_audio_description, default=False)
+    batch_infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=f0_autotune_description, default=False)
     batch_infer_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
-    batch_infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=clean_audio_description, default=False)
+    batch_infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=clean_audio_description, default=False)
     batch_infer_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
     batch_infer_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
     batch_infer_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
         "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
     batch_infer_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
     batch_infer_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
-    batch_infer_parser.add_argument("--formant_shifting", type=lambda x: bool(strtobool(x)), choices=[True, False], help=formant_shifting_description, default=False)
-    batch_infer_parser.add_argument("--formant_qfrency", type=float, help=formant_qfrency_description, default=1.0)
-    batch_infer_parser.add_argument("--formant_timbre", type=float, help=formant_timbre_description, default=1.0)
     batch_infer_parser.add_argument("--sid", type=int, help=sid_description, default=0)
 
     # Parser for 'tts' mode
@@ -330,7 +369,7 @@ def parse_arguments():
     tts_parser.add_argument("--tts_voice", type=str, help="Voice to be used for TTS synthesis.", choices=locales, required=True)
     tts_parser.add_argument("--tts_rate", type=int, help="Control the speaking rate of the TTS.", choices=range(-100, 101), default=0)
     tts_parser.add_argument("--pitch", type=int, help=pitch_description, choices=range(-24, 25), default=0)
-    tts_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 10 for i in range(11)], default=0.3)
+    t Codex: tts_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 10 for i in range(11)], default=0.3)
     tts_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 10 for i in range(11)], default=1)
     tts_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 10 for i in range(6)], default=0.33)
     tts_parser.add_argument("--hop_length", type=int, help=hop_length_description, choices=range(1, 513), default=128)
@@ -341,10 +380,10 @@ def parse_arguments():
     tts_parser.add_argument("--output_rvc_path", type=str, help="Full path to save the voice-converted audio.", required=True)
     tts_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
     tts_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
-    tts_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=split_audio_description, default=False)
-    tts_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x)), choices=[True, False], help=f0_autotune_description, default=False)
+    tts_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=split_audio_description, default=False)
+    tts_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=f0_autotune_description, default=False)
     tts_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
-    tts_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=clean_audio_description, default=False)
+    tts_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=clean_audio_description, default=False)
     tts_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
     tts_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
     tts_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
@@ -358,9 +397,9 @@ def parse_arguments():
 
     # Parser for 'prerequisites' mode
     prerequisites_parser = subparsers.add_parser("prerequisites", help="Install prerequisites for RVC.")
-    prerequisites_parser.add_argument("--pretraineds_hifigan", type=lambda x: bool(strtobool(x)), choices=[True, False], default=True, help="Download pretrained models for RVC v2.")
-    prerequisites_parser.add_argument("--models", type=lambda x: bool(strtobool(x)), choices=[True, False], default=True, help="Download additional models.")
-    prerequisites_parser.add_argument("--exe", type=lambda x: bool(strtobool(x)), choices=[True, False], default=True, help="Download required executables.")
+    prerequisites_parser.add_argument("--pretraineds_hifigan", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], default=True, help="Download pretrained models for RVC v2.")
+    prerequisites_parser.add_argument("--models", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], default=True, help="Download additional models.")
+    prerequisites_parser.add_argument("--exe", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], default=True, help="Download required executables.")
 
     return parser.parse_args()
 
@@ -393,9 +432,6 @@ def main():
                 embedder_model=args.embedder_model,
                 embedder_model_custom=args.embedder_model_custom,
                 f0_file=args.f0_file,
-                formant_shifting=args.formant_shifting,
-                formant_qfrency=args.formant_qfrency,
-                formant_timbre=args.formant_timbre,
                 sid=args.sid,
             )
             print(result)
@@ -420,9 +456,7 @@ def main():
                 embedder_model=args.embedder_model,
                 embedder_model_custom=args.embedder_model_custom,
                 f0_file=args.f0_file,
-                formant_shifting=args.formant_shifting,
-                formant_qfrency=args.formant_qfrency,
-                formant_timbre=args.formant_timbre,
+                
                 sid=args.sid,
             )
             print(result)
@@ -467,6 +501,7 @@ def main():
         print(f"An error occurred during execution: {error}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
