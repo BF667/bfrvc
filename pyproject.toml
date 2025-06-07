@@ -63,7 +63,6 @@ plotting = ["matplotlib>=3.7.2"]
 
 [project.urls]
 Homepage = "https://github.com/BF667/bfrvc"
-Documentation = "https://bfrvc.readthedocs.io"
 Repository = "https://github.com/BF667/bfrvc"
 Issues = "https://github.com/BF667/bfrvc/issues"
 
