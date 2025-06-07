@@ -21,3 +21,7 @@ pip install bfrvc -u
 ```
 bfrvc -h
 ```
+
+
+
+this for only inference. But to use more feature, get it in [Extension](https://github.com/BF667/BFRVC-Extension.git)
