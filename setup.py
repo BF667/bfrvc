@@ -32,7 +32,7 @@ setup(
         "wget>=3.2",
         "ffmpeg-python>=0.2.0",
         "faiss-cpu>=1.7.3,<1.8.1",
-        "lirbosa==0.10.0",
+        "librosa==0.10.0",
         "scipy>=1.11.1",
         "soundfile>=0.12.1",
         "noisereduce>=3.0.0",
