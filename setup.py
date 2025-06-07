@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="bfrvc",
-    version="0.5.2",
+    version="0.5.3",
     description="A Retrieval-based Voice Conversion (RVC) and Text-to-Speech (TTS) tool",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
