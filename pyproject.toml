@@ -7,7 +7,7 @@ name = "bfrvc"
 version = "0.1.0"
 description = "A Retrieval-based Voice Conversion (RVC) and Text-to-Speech (TTS) tool"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = "<3.10"
 license = { file = "LICENSE" }
 authors = [
     { name = "BF667", email = "festyus09@gmail.com" }
