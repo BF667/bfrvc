@@ -11,8 +11,8 @@ import numpy as np
 from scipy import signal
 from torch import Tensor
 
-from bfrvc.lib.predictors.RMVPE import RMVPE0Predictor
-from bfrvc.lib.predictors.FCPE import FCPEF0Predictor
+from bfrvc.units.predictors.RMVPE import RMVPE0Predictor
+from bfrvc.units.predictors.FCPE import FCPEF0Predictor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
