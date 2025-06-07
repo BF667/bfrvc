@@ -290,7 +290,7 @@ def run_prerequisites_script(
 # Parse arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description="BFRVC: Voice Conversion and TTS Tool")
-    subparsers = parser.add_subparsers(title="subcommands", dest="mode", help="Choose a mode")
+    subparsers = parser.add_subparsers(title="parser", dest="command", help="Choose a mode")
 
     # Parser for 'infer' mode
     infer_parser = subparsers.add_parser("infer", help="Run inference")
@@ -369,9 +369,9 @@ def parse_arguments():
     tts_parser.add_argument("--tts_voice", type=str, help="Voice to be used for TTS synthesis.", choices=locales, required=True)
     tts_parser.add_argument("--tts_rate", type=int, help="Control the speaking rate of the TTS.", choices=range(-100, 101), default=0)
     tts_parser.add_argument("--pitch", type=int, help=pitch_description, choices=range(-24, 25), default=0)
-    t Codex: tts_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 10 for i in range(11)], default=0.3)
-    tts_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 10 for i in range(11)], default=1)
-    tts_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 10 for i in range(6)], default=0.33)
+    tts_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 100.0 for i in range(0, 101)], default=0.3)
+    tts_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 100.0 for i in range(0, 101)], default=1)
+    tts_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 1000.0 for i in range(0, 501)], default=0.33)
     tts_parser.add_argument("--hop_length", type=int, help=hop_length_description, choices=range(1, 513), default=128)
     tts_parser.add_argument("--f0_method", type=str, help=f0_method_description, choices=[
         "crepe", "crepe-tiny", "rmvpe", "fcpe", "hybrid[crepe+rmvpe]", "hybrid[crepe+fcpe]",
@@ -390,6 +390,7 @@ def parse_arguments():
         "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
     tts_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
     tts_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
+    tts_parser.add_argument("--sid", type=int, help=sid_description, default=0)
 
     # Parser for 'download' mode
     download_parser = subparsers.add_parser("download", help="Download a model from a provided link.")
@@ -405,13 +406,13 @@ def parse_arguments():
 
 def main():
     if len(sys.argv) == 1:
-        print("Please run the script with '-h' for more information.")
-        sys.exit(1)
+        print("Please run the script with -h for more information.")
+        return
 
     args = parse_arguments()
 
     try:
-        if args.mode == "infer":
+        if args.command == "infer":
             result, output_path = run_infer_script(
                 pitch=args.pitch,
                 index_rate=args.index_rate,
@@ -429,13 +430,13 @@ def main():
                 clean_audio=args.clean_audio,
                 clean_strength=args.clean_strength,
                 export_format=args.export_format,
+                f0_file=args.f0_file,
                 embedder_model=args.embedder_model,
                 embedder_model_custom=args.embedder_model_custom,
-                f0_file=args.f0_file,
                 sid=args.sid,
             )
             print(result)
-        elif args.mode == "batch_infer":
+        elif args.command == "batch_infer":
             result = run_batch_infer_script(
                 pitch=args.pitch,
                 index_rate=args.index_rate,
@@ -453,14 +454,13 @@ def main():
                 clean_audio=args.clean_audio,
                 clean_strength=args.clean_strength,
                 export_format=args.export_format,
+                f0_file=args.f0_file,
                 embedder_model=args.embedder_model,
                 embedder_model_custom=args.embedder_model_custom,
-                f0_file=args.f0_file,
-                
                 sid=args.sid,
             )
             print(result)
-        elif args.mode == "tts":
+        elif args.command == "tts":
             result, output_path = run_tts_script(
                 tts_file=args.tts_file,
                 tts_text=args.tts_text,
@@ -482,15 +482,16 @@ def main():
                 clean_audio=args.clean_audio,
                 clean_strength=args.clean_strength,
                 export_format=args.export_format,
+                f0_file=args.f0_file,
                 embedder_model=args.embedder_model,
                 embedder_model_custom=args.embedder_model_custom,
-                f0_file=args.f0_file,
+                sid=args.sid,
             )
             print(result)
-        elif args.mode == "download":
+        elif args.command == "download":
             result = run_download_script(model_link=args.model_link)
             print(result)
-        elif args.mode == "prerequisites":
+        elif args.command == "prerequisites":
             result = run_prerequisites_script(
                 pretraineds_hifigan=args.pretraineds_hifigan,
                 models=args.models,
