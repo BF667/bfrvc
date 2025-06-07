@@ -25,7 +25,7 @@ python = sys.executable
 @lru_cache(maxsize=1)
 def load_voices_data():
     try:
-        resource_path = pkg_resources.resource_filename('bfrvc.lib.tools', 'tts_voices.json')
+        resource_path = pkg_resources.resource_filename('bfrvc.unit.tools', 'tts_voices.json')
         with open(resource_path, 'r', encoding='utf-8') as file:
             return json.load(file)
     except Exception as e:
