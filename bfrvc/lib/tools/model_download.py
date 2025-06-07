@@ -237,7 +237,7 @@ def unzip_file(zip_path, zip_file_name):
         zip_ref.extractall(extract_path)
     os.remove(zip_file_path)
 
-def model_download_pipeline(url: str):
+def model_download(url: str):
     """
     Pipeline to download and extract a model from a URL.
 
