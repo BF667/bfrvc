@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="bfrvc",
     version="0.5.3",
-    description="A Retrieval-based Voice Conversion (RVC) and Text-to-Speech (TTS) tool",
+    description="A Retrieval-based Voice Conversion (RVC) fork",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="BF667",
@@ -32,7 +32,7 @@ setup(
         "wget>=3.2",
         "ffmpeg-python>=0.2.0",
         "faiss-cpu>=1.7.3,<1.8.1",
-        "librosa>=0.9.2",
+        "lirbosa>=0.10",
         "scipy>=1.11.1",
         "soundfile>=0.12.1",
         "noisereduce>=3.0.0",
