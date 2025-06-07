@@ -280,7 +280,7 @@ def parse_arguments():
 
 def main():
     if len(sys.argv) == 1:
-        print("Please run the script with -h for more information.")
+        print("⚠️: Please run the script with -h for more information.")
         return
 
     args = parse_arguments()
@@ -334,34 +334,7 @@ def main():
                 sid=args.sid,
             )
             print(result)
-        elif args.command == "tts":
-            result, output_path = run_tts_script(
-                tts_file=args.tts_file,
-                tts_text=args.tts_text,
-                tts_voice=args.tts_voice,
-                tts_rate=args.tts_rate,
-                pitch=args.pitch,
-                index_rate=args.index_rate,
-                volume_envelope=args.volume_envelope,
-                protect=args.protect,
-                hop_length=args.hop_length,
-                f0_method=args.f0_method,
-                output_tts_path=args.output_tts_path,
-                output_rvc_path=args.output_rvc_path,
-                pth_path=args.pth_path,
-                index_path=args.index_path,
-                split_audio=args.split_audio,
-                f0_autotune=args.f0_autotune,
-                f0_autotune_strength=args.f0_autotune_strength,
-                clean_audio=args.clean_audio,
-                clean_strength=args.clean_strength,
-                export_format=args.export_format,
-                f0_file=args.f0_file,
-                embedder_model=args.embedder_model,
-                embedder_model_custom=args.embedder_model_custom,
-                sid=args.sid,
-            )
-            print(result)
+        
         elif args.command == "download":
             result = run_download_script(model_link=args.model_link)
             print(result)
