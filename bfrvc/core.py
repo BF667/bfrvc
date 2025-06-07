@@ -12,13 +12,8 @@ CONFIG_DIR = os.path.expanduser("~/.bfrvc")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
 # Package imports
-try:
-    from bfrvc.unit.tools.config_dw import model_need
-    from bfrvc.unit.tools.model_download import model_download
-except ImportError as e:
-    print(f"Error importing bfrvc modules: {e}")
-    sys.exit(1)
-
+from bfrvc.unit.tools.config_dw import model_need
+    
 python = sys.executable
 
 
@@ -161,11 +156,6 @@ def run_batch_infer_script(
 
 
 
-# Download
-def run_download_script(model_link: str):
-    model_download(model_link)
-    return "Model downloaded successfully."
-
 # Prerequisites
 def run_prerequisites_script(
     models: bool,
@@ -237,13 +227,8 @@ def parse_arguments():
     batch_infer_parser.add_argument("--output_folder", type=str, help="Path to the folder for saving output audio files.", required=True)
     batch_infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)# Parser for 'tts' mode
     
-    # Parser for 'download' mode
-    download_parser = subparsers.add_parser("download", help="Download a model from a provided link.")
-    download_parser.add_argument("--model_link", type=str, help="Direct link to the model file.", required=True)
-
     # Parser for 'prerequisites' mode
     prerequisites_parser = subparsers.add_parser("prerequisites", help="Install prerequisites for RVC.")
-    prerequisites_parser.add_argument("--pretraineds_hifigan", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], default=True, help="Download pretrained models for RVC v2.")
     prerequisites_parser.add_argument("--models", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], default=True, help="Download additional models.")
     prerequisites_parser.add_argument("--exe", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], default=True, help="Download required executables.")
 
@@ -306,12 +291,9 @@ def main():
             )
             print(result)
         
-        elif args.command == "download":
-            result = run_download_script(model_link=args.model_link)
-            print(result)
+        
         elif args.command == "prerequisites":
             result = run_prerequisites_script(
-                pretraineds_hifigan=args.pretraineds_hifigan,
                 models=args.models,
                 exe=args.exe,
             )
