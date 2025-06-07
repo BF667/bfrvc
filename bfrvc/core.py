@@ -5,45 +5,36 @@ import argparse
 import subprocess
 from functools import lru_cache
 from distutils.util import strtobool
+import pkg_resources
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
-
-current_script_directory = os.path.dirname(os.path.realpath(__file__))
-logs_path = os.path.join(current_script_directory, "logs")
-
+# Package imports
 from bfrvc.lib.tools.prerequisites_download import prequisites_download_pipeline
 from bfrvc.lib.tools.model_download import model_download_pipeline
 
 python = sys.executable
 
-
-# Get TTS Voices -> https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4
-@lru_cache(maxsize=1)  # Cache only one result since the file is static
+# Load tts_voices.json from package resources
+@lru_cache(maxsize=1)
 def load_voices_data():
-    with open(
-        os.path.join("rvc", "lib", "tools", "tts_voices.json"), "r", encoding="utf-8"
-    ) as file:
-        return json.load(file)
-
+    try:
+        resource_path = pkg_resources.resource_filename('bfrvc.lib.tools', 'tts_voices.json')
+        with open(resource_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except Exception as e:
+        raise FileNotFoundError(f"Could not load tts_voices.json: {e}")
 
 voices_data = load_voices_data()
 locales = list({voice["ShortName"] for voice in voices_data})
 
-
 @lru_cache(maxsize=None)
 def import_voice_converter():
-    from rvc.infer.infer import VoiceConverter
-
+    from bfrvc.infer.infer import VoiceConverter
     return VoiceConverter()
-
 
 @lru_cache(maxsize=1)
 def get_config():
-    from rvc.configs.config import Config
-
+    from bfrvc.configs.config import Config
     return Config()
-
 
 # Infer
 def run_infer_script(
@@ -67,6 +58,9 @@ def run_infer_script(
     embedder_model: str,
     embedder_model_custom: str = None,
     sid: int = 0,
+    formant_shifting: bool = False,
+    formant_qfrency: float = 1.0,
+    formant_timbre: float = 1.0,
 ):
     kwargs = {
         "audio_input_path": input_path,
@@ -79,8 +73,6 @@ def run_infer_script(
         "protect": protect,
         "hop_length": hop_length,
         "f0_method": f0_method,
-        "pth_path": pth_path,
-        "index_path": index_path,
         "split_audio": split_audio,
         "f0_autotune": f0_autotune,
         "f0_autotune_strength": f0_autotune_strength,
@@ -91,15 +83,15 @@ def run_infer_script(
         "embedder_model": embedder_model,
         "embedder_model_custom": embedder_model_custom,
         "sid": sid,
+        "formant_shifting": formant_shifting,
+        "formant_qfrency": formant_qfrency,
+        "formant_timbre": formant_timbre,
     }
     infer_pipeline = import_voice_converter()
-    infer_pipeline.convert_audio(
-        **kwargs,
-    )
+    infer_pipeline.convert_audio(**kwargs)
     return f"File {input_path} inferred successfully.", output_path.replace(
         ".wav", f".{export_format.lower()}"
     )
-
 
 # Batch infer
 def run_batch_infer_script(
@@ -123,6 +115,9 @@ def run_batch_infer_script(
     embedder_model: str,
     embedder_model_custom: str = None,
     sid: int = 0,
+    formant_shifting: bool = False,
+    formant_qfrency: float = 1.0,
+    formant_timbre: float = 1.0,
 ):
     kwargs = {
         "audio_input_paths": input_folder,
@@ -135,8 +130,6 @@ def run_batch_infer_script(
         "protect": protect,
         "hop_length": hop_length,
         "f0_method": f0_method,
-        "pth_path": pth_path,
-        "index_path": index_path,
         "split_audio": split_audio,
         "f0_autotune": f0_autotune,
         "f0_autotune_strength": f0_autotune_strength,
@@ -146,15 +139,14 @@ def run_batch_infer_script(
         "f0_file": f0_file,
         "embedder_model": embedder_model,
         "embedder_model_custom": embedder_model_custom,
-        sid=sid,
+        "sid": sid,
+        "formant_shifting": formant_shifting,
+        "formant_qfrency": formant_qfrency,
+        "formant_timbre": formant_timbre,
     }
     infer_pipeline = import_voice_converter()
-    infer_pipeline.convert_audio_batch(
-        **kwargs,
-    )
-
+    infer_pipeline.convert_audio_batch(**kwargs)
     return f"Files from {input_folder} inferred successfully."
-
 
 # TTS
 def run_tts_script(
@@ -183,29 +175,21 @@ def run_tts_script(
     embedder_model_custom: str = None,
     sid: int = 0,
 ):
+    tts_script_path = pkg_resources.resource_filename('bfrvc.lib.tools', 'tts.py')
 
-    tts_script_path = os.path.join("rvc", "lib", "tools", "tts.py")
-
-    if os.path.exists(output_tts_path) and os.path.abspath(output_tts_path).startswith(
-        os.path.abspath("assets")
-    ):
+    if os.path.exists(output_tts_path):
         os.remove(output_tts_path)
 
     command_tts = [
-        *map(
-            str,
-            [
-                python,
-                tts_script_path,
-                tts_file,
-                tts_text,
-                tts_voice,
-                tts_rate,
-                output_tts_path,
-            ],
-        ),
+        str(python),
+        tts_script_path,
+        tts_file,
+        tts_text,
+        tts_voice,
+        str(tts_rate),
+        output_tts_path,
     ]
-    subprocess.run(command_tts)
+    subprocess.run(command_tts, check=True)
     infer_pipeline = import_voice_converter()
     infer_pipeline.convert_audio(
         pitch=pitch,
@@ -228,22 +212,15 @@ def run_tts_script(
         embedder_model=embedder_model,
         embedder_model_custom=embedder_model_custom,
         sid=sid,
-        
     )
-
     return f"Text {tts_text} synthesized successfully.", output_rvc_path.replace(
         ".wav", f".{export_format.lower()}"
     )
 
-
-
-
-
 # Download
 def run_download_script(model_link: str):
     model_download_pipeline(model_link)
-    return f"Model downloaded successfully."
-
+    return "Model downloaded successfully."
 
 # Prerequisites
 def run_prerequisites_script(
@@ -251,592 +228,133 @@ def run_prerequisites_script(
     models: bool,
     exe: bool,
 ):
-    prequisites_download_pipeline(
-        pretraineds_hifigan,
-        models,
-        exe,
-    )
+    prequisites_download_pipeline(pretraineds_hifigan, models, exe)
     return "Prerequisites installed successfully."
-
-
-
-
 
 # Parse arguments
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="BFRVC FORK 😺."
-    )
-    subparsers = parser.add_subparsers(
-        title="subcommands", dest="mode", help="Choose a mode"
-    )
+    parser = argparse.ArgumentParser(description="BFRVC: Voice Conversion and TTS Tool")
+    subparsers = parser.add_subparsers(title="subcommands", dest="mode", help="Choose a mode")
 
     # Parser for 'infer' mode
     infer_parser = subparsers.add_parser("infer", help="Run inference")
-    pitch_description = (
-        "Set the pitch of the audio. Higher values result in a higher pitch."
-    )
-    infer_parser.add_argument(
-        "--pitch",
-        type=int,
-        help=pitch_description,
-        choices=range(-24, 25),
-        default=0,
-    )
-    index_rate_description = "Control the influence of the index file on the output. Higher values mean stronger influence. Lower values can help reduce artifacts but may result in less accurate voice cloning."
-    infer_parser.add_argument(
-        "--index_rate",
-        type=float,
-        help=index_rate_description,
-        choices=[i / 100.0 for i in range(0, 101)],
-        default=0.3,
-    )
-    volume_envelope_description = "Control the blending of the output's volume envelope. A value of 1 means the output envelope is fully used."
-    infer_parser.add_argument(
-        "--volume_envelope",
-        type=float,
-        help=volume_envelope_description,
-        choices=[i / 100.0 for i in range(0, 101)],
-        default=1,
-    )
-    protect_description = "Protect consonants and breathing sounds from artifacts. A value of 0.5 offers the strongest protection, while lower values may reduce the protection level but potentially mitigate the indexing effect."
-    infer_parser.add_argument(
-        "--protect",
-        type=float,
-        help=protect_description,
-        choices=[i / 1000.0 for i in range(0, 501)],
-        default=0.33,
-    )
-    hop_length_description = "Only applicable for the Crepe pitch extraction method. Determines the time it takes for the system to react to a significant pitch change. Smaller values require more processing time but can lead to better pitch accuracy."
-    infer_parser.add_argument(
-        "--hop_length",
-        type=int,
-        help=hop_length_description,
-        choices=range(1, 513),
-        default=128,
-    )
-    f0_method_description = "Choose the pitch extraction algorithm for the conversion. 'rmvpe' is the default and generally recommended."
-    infer_parser.add_argument(
-        "--f0_method",
-        type=str,
-        help=f0_method_description,
-        choices=[
-            "crepe",
-            "crepe-tiny",
-            "rmvpe",
-            "fcpe",
-            "hybrid[crepe+rmvpe]",
-            "hybrid[crepe+fcpe]",
-            "hybrid[rmvpe+fcpe]",
-            "hybrid[crepe+rmvpe+fcpe]",
-        ],
-        default="rmvpe",
-    )
-    infer_parser.add_argument(
-        "--input_path",
-        type=str,
-        help="Full path to the input audio file.",
-        required=True,
-    )
-    infer_parser.add_argument(
-        "--output_path",
-        type=str,
-        help="Full path to the output audio file.",
-        required=True,
-    )
+    pitch_description = "Set the pitch of the audio. Higher values result in a higher pitch."
+    infer_parser.add_argument("--pitch", type=int, help=pitch_description, choices=range(-24, 25), default=0)
+    index_rate_description = "Control the influence of the index file on the output."
+    infer_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 100.0 for i in range(0, 101)], default=0.3)
+    volume_envelope_description = "Control the blending of the output's volume envelope."
+    infer_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 100.0 for i in range(0, 101)], default=1)
+    protect_description = "Protect consonants and breathing sounds from artifacts."
+    infer_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 1000.0 for i in range(0, 501)], default=0.33)
+    hop_length_description = "Determines the time it takes for the system to react to a pitch change (Crepe only)."
+    infer_parser.add_argument("--hop_length", type=int, help=hop_length_description, choices=range(1, 513), default=128)
+    f0_method_description = "Choose the pitch extraction algorithm for the conversion."
+    infer_parser.add_argument("--f0_method", type=str, help=f0_method_description, choices=[
+        "crepe", "crepe-tiny", "rmvpe", "fcpe", "hybrid[crepe+rmvpe]", "hybrid[crepe+fcpe]",
+        "hybrid[rmvpe+fcpe]", "hybrid[crepe+rmvpe+fcpe]"], default="rmvpe")
+    infer_parser.add_argument("--input_path", type=str, help="Full path to the input audio file.", required=True)
+    infer_parser.add_argument("--output_path", type=str, help="Full path to the output audio file.", required=True)
     pth_path_description = "Full path to the RVC model file (.pth)."
-    infer_parser.add_argument(
-        "--pth_path", type=str, help=pth_path_description, required=True
-    )
+    infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
     index_path_description = "Full path to the index file (.index)."
-    infer_parser.add_argument(
-        "--index_path", type=str, help=index_path_description, required=True
-    )
-    split_audio_description = "Split the audio into smaller segments before inference. This can improve the quality of the output for longer audio files."
-    infer_parser.add_argument(
-        "--split_audio",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=split_audio_description,
-        default=False,
-    )
-    f0_autotune_description = "Apply a light autotune to the inferred audio. Particularly useful for singing voice conversions."
-    infer_parser.add_argument(
-        "--f0_autotune",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=f0_autotune_description,
-        default=False,
-    )
-    f0_autotune_strength_description = "Set the autotune strength - the more you increase it the more it will snap to the chromatic grid."
-    infer_parser.add_argument(
-        "--f0_autotune_strength",
-        type=float,
-        help=f0_autotune_strength_description,
-        choices=[(i / 10) for i in range(11)],
-        default=1.0,
-    )
-    clean_audio_description = "Clean the output audio using noise reduction algorithms. Recommended for speech conversions."
-    infer_parser.add_argument(
-        "--clean_audio",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=clean_audio_description,
-        default=False,
-    )
-    clean_strength_description = "Adjust the intensity of the audio cleaning process. Higher values result in stronger cleaning, but may lead to a more compressed sound."
-    infer_parser.add_argument(
-        "--clean_strength",
-        type=float,
-        help=clean_strength_description,
-        choices=[(i / 10) for i in range(11)],
-        default=0.7,
-    )
+    infer_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
+    split_audio_description = "Split the audio into smaller segments before inference."
+    infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=split_audio_description, default=False)
+    f0_autotune_description = "Apply a light autotune to the inferred audio."
+    infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x)), choices=[True, False], help=f0_autotune_description, default=False)
+    f0_autotune_strength_description = "Set the autotune strength."
+    infer_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
+    clean_audio_description = "Clean the output audio using noise reduction algorithms."
+    infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=clean_audio_description, default=False)
+    clean_strength_description = "Adjust the intensity of the audio cleaning process."
+    infer_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
     export_format_description = "Select the desired output audio format."
-    infer_parser.add_argument(
-        "--export_format",
-        type=str,
-        help=export_format_description,
-        choices=["WAV", "MP3", "FLAC", "OGG", "M4A"],
-        default="WAV",
-    )
-    embedder_model_description = (
-        "Choose the model used for generating speaker embeddings."
-    )
-    infer_parser.add_argument(
-        "--embedder_model",
-        type=str,
-        help=embedder_model_description,
-        choices=[
-            "contentvec",
-            "chinese-hubert-base",
-            "japanese-hubert-base",
-            "korean-hubert-base",
-            "custom",
-        ],
-        default="contentvec",
-    )
-    embedder_model_custom_description = "Specify the path to a custom model for speaker embedding. Only applicable if 'embedder_model' is set to 'custom'."
-    infer_parser.add_argument(
-        "--embedder_model_custom",
-        type=str,
-        help=embedder_model_custom_description,
-        default=None,
-    )
-    f0_file_description = "Full path to an external F0 file (.f0). This allows you to use pre-computed pitch values for the input audio."
-    infer_parser.add_argument(
-        "--f0_file",
-        type=str,
-        help=f0_file_description,
-        default=None,
-    )
-    formant_shifting_description = "Apply formant shifting to the input audio. This can help adjust the timbre of the voice."
-    infer_parser.add_argument(
-        "--formant_shifting",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=formant_shifting_description,
-        default=False,
-        required=False,
-    )
-    formant_qfrency_description = "Control the frequency of the formant shifting effect. Higher values result in a more pronounced effect."
-    infer_parser.add_argument(
-        "--formant_qfrency",
-        type=float,
-        help=formant_qfrency_description,
-        default=1.0,
-        required=False,
-    )
-    formant_timbre_description = "Control the timbre of the formant shifting effect. Higher values result in a more pronounced effect."
-    infer_parser.add_argument(
-        "--formant_timbre",
-        type=float,
-        help=formant_timbre_description,
-        default=1.0,
-        required=False,
-    )
+    infer_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
+    embedder_model_description = "Choose the model used for generating speaker embeddings."
+    infer_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
+        "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
+    embedder_model_custom_description = "Path to a custom model for speaker embedding."
+    infer_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
+    f0_file_description = "Full path to an external F0 file (.f0)."
+    infer_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
+    formant_shifting_description = "Apply formant shifting to the input audio."
+    infer_parser.add_argument("--formant_shifting", type=lambda x: bool(strtobool(x)), choices=[True, False], help=formant_shifting_description, default=False)
+    formant_qfrency_description = "Control the frequency of the formant shifting effect."
+    infer_parser.add_argument("--formant_qfrency", type=float, help=formant_qfrency_description, default=1.0)
+    formant_timbre_description = "Control the timbre of the formant shifting effect."
+    infer_parser.add_argument("--formant_timbre", type=float, help=formant_timbre_description, default=1.0)
     sid_description = "Speaker ID for multi-speaker models."
-    infer_parser.add_argument(
-        "--sid",
-        type=int,
-        help=sid_description,
-        default=0,
-        required=False,
-    )
-    
+    infer_parser.add_argument("--sid", type=int, help=sid_description, default=0)
 
     # Parser for 'batch_infer' mode
-    batch_infer_parser = subparsers.add_parser(
-        "batch_infer",
-        help="Run batch inference",
-    )
-    batch_infer_parser.add_argument(
-        "--pitch",
-        type=int,
-        help=pitch_description,
-        choices=range(-24, 25),
-        default=0,
-    )
-    batch_infer_parser.add_argument(
-        "--index_rate",
-        type=float,
-        help=index_rate_description,
-        choices=[i / 100.0 for i in range(0, 101)],
-        default=0.3,
-    )
-    batch_infer_parser.add_argument(
-        "--volume_envelope",
-        type=float,
-        help=volume_envelope_description,
-        choices=[i / 100.0 for i in range(0, 101)],
-        default=1,
-    )
-    batch_infer_parser.add_argument(
-        "--protect",
-        type=float,
-        help=protect_description,
-        choices=[i / 1000.0 for i in range(0, 501)],
-        default=0.33,
-    )
-    batch_infer_parser.add_argument(
-        "--hop_length",
-        type=int,
-        help=hop_length_description,
-        choices=range(1, 513),
-        default=128,
-    )
-    batch_infer_parser.add_argument(
-        "--f0_method",
-        type=str,
-        help=f0_method_description,
-        choices=[
-            "crepe",
-            "crepe-tiny",
-            "rmvpe",
-            "fcpe",
-            "hybrid[crepe+rmvpe]",
-            "hybrid[crepe+fcpe]",
-            "hybrid[rmvpe+fcpe]",
-            "hybrid[crepe+rmvpe+fcpe]",
-        ],
-        default="rmvpe",
-    )
-    batch_infer_parser.add_argument(
-        "--input_folder",
-        type=str,
-        help="Path to the folder containing input audio files.",
-        required=True,
-    )
-    batch_infer_parser.add_argument(
-        "--output_folder",
-        type=str,
-        help="Path to the folder for saving output audio files.",
-        required=True,
-    )
-    batch_infer_parser.add_argument(
-        "--pth_path", type=str, help=pth_path_description, required=True
-    )
-    batch_infer_parser.add_argument(
-        "--index_path", type=str, help=index_path_description, required=True
-    )
-    batch_infer_parser.add_argument(
-        "--split_audio",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=split_audio_description,
-        default=False,
-    )
-    batch_infer_parser.add_argument(
-        "--f0_autotune",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=f0_autotune_description,
-        default=False,
-    )
-    batch_infer_parser.add_argument(
-        "--f0_autotune_strength",
-        type=float,
-        help=clean_strength_description,
-        choices=[(i / 10) for i in range(11)],
-        default=1.0,
-    )
-    batch_infer_parser.add_argument(
-        "--clean_audio",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=clean_audio_description,
-        default=False,
-    )
-    batch_infer_parser.add_argument(
-        "--clean_strength",
-        type=float,
-        help=clean_strength_description,
-        choices=[(i / 10) for i in range(11)],
-        default=0.7,
-    )
-    batch_infer_parser.add_argument(
-        "--export_format",
-        type=str,
-        help=export_format_description,
-        choices=["WAV", "MP3", "FLAC", "OGG", "M4A"],
-        default="WAV",
-    )
-    batch_infer_parser.add_argument(
-        "--embedder_model",
-        type=str,
-        help=embedder_model_description,
-        choices=[
-            "contentvec",
-            "chinese-hubert-base",
-            "japanese-hubert-base",
-            "korean-hubert-base",
-            "custom",
-        ],
-        default="contentvec",
-    )
-    batch_infer_parser.add_argument(
-        "--embedder_model_custom",
-        type=str,
-        help=embedder_model_custom_description,
-        default=None,
-    )
-    batch_infer_parser.add_argument(
-        "--f0_file",
-        type=str,
-        help=f0_file_description,
-        default=None,
-    )
-    batch_infer_parser.add_argument(
-        "--formant_shifting",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=formant_shifting_description,
-        default=False,
-        required=False,
-    )
-    batch_infer_parser.add_argument(
-        "--formant_qfrency",
-        type=float,
-        help=formant_qfrency_description,
-        default=1.0,
-        required=False,
-    )
-    batch_infer_parser.add_argument(
-        "--formant_timbre",
-        type=float,
-        help=formant_timbre_description,
-        default=1.0,
-        required=False,
-    )
-    batch_infer_parser.add_argument(
-        "--sid",
-        type=int,
-        help=sid_description,
-        default=0,
-        required=False,
-    )
-
-
-
-    
-        
+    batch_infer_parser = subparsers.add_parser("batch_infer", help="Run batch inference")
+    batch_infer_parser.add_argument("--pitch", type=int, help=pitch_description, choices=range(-24, 25), default=0)
+    batch_infer_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 100.0 for i in range(0, 101)], default=0.3)
+    batch_infer_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 100.0 for i in range(0, 101)], default=1)
+    batch_infer_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 1000.0 for i in range(0, 501)], default=0.33)
+    batch_infer_parser.add_argument("--hop_length", type=int, help=hop_length_description, choices=range(1, 513), default=128)
+    batch_infer_parser.add_argument("--f0_method", type=str, help=f0_method_description, choices=[
+        "crepe", "crepe-tiny", "rmvpe", "fcpe", "hybrid[crepe+rmvpe]", "hybrid[crepe+fcpe]",
+        "hybrid[rmvpe+fcpe]", "hybrid[crepe+rmvpe+fcpe]"], default="rmvpe")
+    batch_infer_parser.add_argument("--input_folder", type=str, help="Path to the folder containing input audio files.", required=True)
+    batch_infer_parser.add_argument("--output_folder", type=str, help="Path to the folder for saving output audio files.", required=True)
+    batch_infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
+    batch_infer_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
+    batch_infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=split_audio_description, default=False)
+    batch_infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x)), choices=[True, False], help=f0_autotune_description, default=False)
+    batch_infer_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
+    batch_infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=clean_audio_description, default=False)
+    batch_infer_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
+    batch_infer_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
+    batch_infer_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
+        "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
+    batch_infer_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
+    batch_infer_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
+    batch_infer_parser.add_argument("--formant_shifting", type=lambda x: bool(strtobool(x)), choices=[True, False], help=formant_shifting_description, default=False)
+    batch_infer_parser.add_argument("--formant_qfrency", type=float, help=formant_qfrency_description, default=1.0)
+    batch_infer_parser.add_argument("--formant_timbre", type=float, help=formant_timbre_description, default=1.0)
+    batch_infer_parser.add_argument("--sid", type=int, help=sid_description, default=0)
 
     # Parser for 'tts' mode
     tts_parser = subparsers.add_parser("tts", help="Run TTS inference")
-    tts_parser.add_argument(
-        "--tts_file", type=str, help="File with a text to be synthesized", required=True
-    )
-    tts_parser.add_argument(
-        "--tts_text", type=str, help="Text to be synthesized", required=True
-    )
-    tts_parser.add_argument(
-        "--tts_voice",
-        type=str,
-        help="Voice to be used for TTS synthesis.",
-        choices=locales,
-        required=True,
-    )
-    tts_parser.add_argument(
-        "--tts_rate",
-        type=int,
-        help="Control the speaking rate of the TTS. Values range from -100 (slower) to 100 (faster).",
-        choices=range(-100, 101),
-        default=0,
-    )
-    tts_parser.add_argument(
-        "--pitch",
-        type=int,
-        help=pitch_description,
-        choices=range(-24, 25),
-        default=0,
-    )
-    tts_parser.add_argument(
-        "--index_rate",
-        type=float,
-        help=index_rate_description,
-        choices=[(i / 10) for i in range(11)],
-        default=0.3,
-    )
-    tts_parser.add_argument(
-        "--volume_envelope",
-        type=float,
-        help=volume_envelope_description,
-        choices=[(i / 10) for i in range(11)],
-        default=1,
-    )
-    tts_parser.add_argument(
-        "--protect",
-        type=float,
-        help=protect_description,
-        choices=[(i / 10) for i in range(6)],
-        default=0.33,
-    )
-    tts_parser.add_argument(
-        "--hop_length",
-        type=int,
-        help=hop_length_description,
-        choices=range(1, 513),
-        default=128,
-    )
-    tts_parser.add_argument(
-        "--f0_method",
-        type=str,
-        help=f0_method_description,
-        choices=[
-            "crepe",
-            "crepe-tiny",
-            "rmvpe",
-            "fcpe",
-            "hybrid[crepe+rmvpe]",
-            "hybrid[crepe+fcpe]",
-            "hybrid[rmvpe+fcpe]",
-            "hybrid[crepe+rmvpe+fcpe]",
-        ],
-        default="rmvpe",
-    )
-    tts_parser.add_argument(
-        "--output_tts_path",
-        type=str,
-        help="Full path to save the synthesized TTS audio.",
-        required=True,
-    )
-    tts_parser.add_argument(
-        "--output_rvc_path",
-        type=str,
-        help="Full path to save the voice-converted audio using the synthesized TTS.",
-        required=True,
-    )
-    tts_parser.add_argument(
-        "--pth_path", type=str, help=pth_path_description, required=True
-    )
-    tts_parser.add_argument(
-        "--index_path", type=str, help=index_path_description, required=True
-    )
-    tts_parser.add_argument(
-        "--split_audio",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=split_audio_description,
-        default=False,
-    )
-    tts_parser.add_argument(
-        "--f0_autotune",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=f0_autotune_description,
-        default=False,
-    )
-    tts_parser.add_argument(
-        "--f0_autotune_strength",
-        type=float,
-        help=clean_strength_description,
-        choices=[(i / 10) for i in range(11)],
-        default=1.0,
-    )
-    tts_parser.add_argument(
-        "--clean_audio",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        help=clean_audio_description,
-        default=False,
-    )
-    tts_parser.add_argument(
-        "--clean_strength",
-        type=float,
-        help=clean_strength_description,
-        choices=[(i / 10) for i in range(11)],
-        default=0.7,
-    )
-    tts_parser.add_argument(
-        "--export_format",
-        type=str,
-        help=export_format_description,
-        choices=["WAV", "MP3", "FLAC", "OGG", "M4A"],
-        default="WAV",
-    )
-    tts_parser.add_argument(
-        "--embedder_model",
-        type=str,
-        help=embedder_model_description,
-        choices=[
-            "contentvec",
-            "chinese-hubert-base",
-            "japanese-hubert-base",
-            "korean-hubert-base",
-            "custom",
-        ],
-        default="contentvec",
-    )
-    tts_parser.add_argument(
-        "--embedder_model_custom",
-        type=str,
-        help=embedder_model_custom_description,
-        default=None,
-    )
-    tts_parser.add_argument(
-        "--f0_file",
-        type=str,
-        help=f0_file_description,
-        default=None,
-    )
+    tts_parser.add_argument("--tts_file", type=str, help="File with a text to be synthesized", required=True)
+    tts_parser.add_argument("--tts_text", type=str, help="Text to be synthesized", required=True)
+    tts_parser.add_argument("--tts_voice", type=str, help="Voice to be used for TTS synthesis.", choices=locales, required=True)
+    tts_parser.add_argument("--tts_rate", type=int, help="Control the speaking rate of the TTS.", choices=range(-100, 101), default=0)
+    tts_parser.add_argument("--pitch", type=int, help=pitch_description, choices=range(-24, 25), default=0)
+    tts_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 10 for i in range(11)], default=0.3)
+    tts_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 10 for i in range(11)], default=1)
+    tts_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 10 for i in range(6)], default=0.33)
+    tts_parser.add_argument("--hop_length", type=int, help=hop_length_description, choices=range(1, 513), default=128)
+    tts_parser.add_argument("--f0_method", type=str, help=f0_method_description, choices=[
+        "crepe", "crepe-tiny", "rmvpe", "fcpe", "hybrid[crepe+rmvpe]", "hybrid[crepe+fcpe]",
+        "hybrid[rmvpe+fcpe]", "hybrid[crepe+rmvpe+fcpe]"], default="rmvpe")
+    tts_parser.add_argument("--output_tts_path", type=str, help="Full path to save the synthesized TTS audio.", required=True)
+    tts_parser.add_argument("--output_rvc_path", type=str, help="Full path to save the voice-converted audio.", required=True)
+    tts_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
+    tts_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
+    tts_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=split_audio_description, default=False)
+    tts_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x)), choices=[True, False], help=f0_autotune_description, default=False)
+    tts_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
+    tts_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x)), choices=[True, False], help=clean_audio_description, default=False)
+    tts_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
+    tts_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
+    tts_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
+        "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
+    tts_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
+    tts_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
 
     # Parser for 'download' mode
-    download_parser = subparsers.add_parser(
-        "download", help="Download a model from a provided link."
-    )
-    download_parser.add_argument(
-        "--model_link", type=str, help="Direct link to the model file.", required=True
-    )
+    download_parser = subparsers.add_parser("download", help="Download a model from a provided link.")
+    download_parser.add_argument("--model_link", type=str, help="Direct link to the model file.", required=True)
 
     # Parser for 'prerequisites' mode
-    prerequisites_parser = subparsers.add_parser(
-        "prerequisites", help="Install prerequisites for RVC."
-    )
-    prerequisites_parser.add_argument(
-        "--pretraineds_hifigan",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        default=True,
-        help="Download pretrained models for RVC v2.",
-    )
-    prerequisites_parser.add_argument(
-        "--models",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        default=True,
-        help="Download additional models.",
-    )
-    prerequisites_parser.add_argument(
-        "--exe",
-        type=lambda x: bool(strtobool(x)),
-        choices=[True, False],
-        default=True,
-        help="Download required executables.",
-    )
-
+    prerequisites_parser = subparsers.add_parser("prerequisites", help="Install prerequisites for RVC.")
+    prerequisites_parser.add_argument("--pretraineds_hifigan", type=lambda x: bool(strtobool(x)), choices=[True, False], default=True, help="Download pretrained models for RVC v2.")
+    prerequisites_parser.add_argument("--models", type=lambda x: bool(strtobool(x)), choices=[True, False], default=True, help="Download additional models.")
+    prerequisites_parser.add_argument("--exe", type=lambda x: bool(strtobool(x)), choices=[True, False], default=True, help="Download required executables.")
 
     return parser.parse_args()
-
 
 def main():
     if len(sys.argv) == 1:
@@ -847,7 +365,7 @@ def main():
 
     try:
         if args.mode == "infer":
-            run_infer_script(
+            result, output_path = run_infer_script(
                 pitch=args.pitch,
                 index_rate=args.index_rate,
                 volume_envelope=args.volume_envelope,
@@ -871,10 +389,10 @@ def main():
                 formant_qfrency=args.formant_qfrency,
                 formant_timbre=args.formant_timbre,
                 sid=args.sid,
-
             )
+            print(result)
         elif args.mode == "batch_infer":
-            run_batch_infer_script(
+            result = run_batch_infer_script(
                 pitch=args.pitch,
                 index_rate=args.index_rate,
                 volume_envelope=args.volume_envelope,
@@ -898,9 +416,10 @@ def main():
                 formant_qfrency=args.formant_qfrency,
                 formant_timbre=args.formant_timbre,
                 sid=args.sid,
-                
+            )
+            print(result)
         elif args.mode == "tts":
-            run_tts_script(
+            result, output_path = run_tts_script(
                 tts_file=args.tts_file,
                 tts_text=args.tts_text,
                 tts_voice=args.tts_voice,
@@ -925,28 +444,21 @@ def main():
                 embedder_model_custom=args.embedder_model_custom,
                 f0_file=args.f0_file,
             )
-        elif args.mode == "preprocess":
-        
-        
-
+            print(result)
         elif args.mode == "download":
-            run_download_script(
-                model_link=args.model_link,
-            )
+            result = run_download_script(model_link=args.model_link)
+            print(result)
         elif args.mode == "prerequisites":
-            run_prerequisites_script(
+            result = run_prerequisites_script(
                 pretraineds_hifigan=args.pretraineds_hifigan,
                 models=args.models,
                 exe=args.exe,
             )
-
+            print(result)
     except Exception as error:
         print(f"An error occurred during execution: {error}")
-
         import traceback
-
         traceback.print_exc()
-
 
 if __name__ == "__main__":
     main()
