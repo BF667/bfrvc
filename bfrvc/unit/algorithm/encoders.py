@@ -2,10 +2,10 @@ import math
 import torch
 from typing import Optional
 
-from bfrvc.lib.algorithm.commons import sequence_mask
-from bfrvc.lib.algorithm.modules import WaveNet
-from bfrvc.lib.algorithm.normalization import LayerNorm
-from bfrvc.lib.algorithm.attentions import FFN, MultiHeadAttention
+from bfrvc.unit.algorithm.commons import sequence_mask
+from bfrvc.unit.algorithm.modules import WaveNet
+from bfrvc.unit.algorithm.normalization import LayerNorm
+from bfrvc.unit.algorithm.attentions import FFN, MultiHeadAttention
 
 
 class Encoder(torch.nn.Module):
