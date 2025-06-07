@@ -1,5 +1,5 @@
 import torch
-from bfrvc.lib.algorithm.commons import fused_add_tanh_sigmoid_multiply
+from bfrvc.unit.algorithm.commons import fused_add_tanh_sigmoid_multiply
 
 
 class WaveNet(torch.nn.Module):
