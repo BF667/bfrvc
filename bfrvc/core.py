@@ -26,7 +26,7 @@ python = sys.executable
 def load_voices_data():
     try:
         # Attempt to load from package resources
-        resource_path = pkg_resources.resource_filename('bfrvc.unit.tools', 'tts_voices.json')
+        resource_path = pkg_resources.resource_filename('bfrvc', 'unit', 'tools', 'tts_voices.json')
         if not os.path.exists(resource_path):
             raise FileNotFoundError(f"tts_voices.json not found at {resource_path}")
         with open(resource_path, 'r', encoding='utf-8') as file:
