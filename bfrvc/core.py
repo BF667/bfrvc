@@ -237,35 +237,7 @@ def parse_arguments():
     batch_infer_parser.add_argument("--input_folder", type=str, help="Path to the folder containing input audio files.", required=True)
     batch_infer_parser.add_argument("--output_folder", type=str, help="Path to the folder for saving output audio files.", required=True)
     batch_infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)# Parser for 'tts' mode
-    tts_parser = subparsers.add_parser("tts", help="Run TTS inference")
-    tts_parser.add_argument("--tts_file", type=str, help="File with a text to be synthesized", required=True)
-    tts_parser.add_argument("--tts_text", type=str, help="Text to be synthesized", required=True)
-    tts_parser.add_argument("--tts_voice", type=str, help="Voice to be used for TTS synthesis.", choices=locales, required=True)
-    tts_parser.add_argument("--tts_rate", type=int, help="Control the speaking rate of the TTS.", choices=range(-100, 101), default=0)
-    tts_parser.add_argument("--pitch", type=int, help=pitch_description, choices=range(-24, 25), default=0)
-    tts_parser.add_argument("--index_rate", type=float, help=index_rate_description, choices=[i / 100.0 for i in range(0, 101)], default=0.3)
-    tts_parser.add_argument("--volume_envelope", type=float, help=volume_envelope_description, choices=[i / 100.0 for i in range(0, 101)], default=1)
-    tts_parser.add_argument("--protect", type=float, help=protect_description, choices=[i / 1000.0 for i in range(0, 501)], default=0.33)
-    tts_parser.add_argument("--hop_length", type=int, help=hop_length_description, choices=range(1, 513), default=128)
-    tts_parser.add_argument("--f0_method", type=str, help=f0_method_description, choices=[
-        "crepe", "crepe-tiny", "rmvpe", "fcpe", "hybrid[crepe+rmvpe]", "hybrid[crepe+fcpe]",
-        "hybrid[rmvpe+fcpe]", "hybrid[crepe+rmvpe+fcpe]"], default="rmvpe")
-    tts_parser.add_argument("--output_tts_path", type=str, help="Full path to save the synthesized TTS audio.", required=True)
-    tts_parser.add_argument("--output_rvc_path", type=str, help="Full path to save the voice-converted audio.", required=True)
-    tts_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
-    tts_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
-    tts_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=split_audio_description, default=False)
-    tts_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=f0_autotune_description, default=False)
-    tts_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
-    tts_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=clean_audio_description, default=False)
-    tts_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
-    tts_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
-    tts_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
-        "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
-    tts_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
-    tts_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
-    tts_parser.add_argument("--sid", type=int, help=sid_description, default=0)
-
+    
     # Parser for 'download' mode
     download_parser = subparsers.add_parser("download", help="Download a model from a provided link.")
     download_parser.add_argument("--model_link", type=str, help="Direct link to the model file.", required=True)
