@@ -21,36 +21,7 @@ except ImportError as e:
 
 python = sys.executable
 
-# Load tts_voices.json from package resources with fallback
-@lru_cache(maxsize=1)
-def load_voices_data():
-    try:
-        # Attempt to load from package resources
-        resource_path = pkg_resources.resource_filename('bfrvc', 'unit', 'tools', 'tts_voices.json')
-        if not os.path.exists(resource_path):
-            raise FileNotFoundError(f"tts_voices.json not found at {resource_path}")
-        with open(resource_path, 'r', encoding='utf-8') as file:
-            return json.load(file)
-    except FileNotFoundError as e:
-        # Fallback to a default location or exit gracefully
-        fallback_path = os.path.join(CONFIG_DIR, 'tts_voices.json')
-        if os.path.exists(fallback_path):
-            with open(fallback_path, 'r', encoding='utf-8') as file:
-                return json.load(file)
-        else:
-            print(f"Error: Could not load tts_voices.json from {resource_path} or {fallback_path}. Please ensure the file exists.")
-            sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error loading tts_voices.json: {e}")
-        sys.exit(1)
 
-# Load voices data and extract locales
-try:
-    voices_data = load_voices_data()
-    locales = list({voice.get("ShortName", "") for voice in voices_data if voice.get("ShortName")})
-except Exception as e:
-    print(f"Failed to initialize voices data: {e}")
-    sys.exit(1)
 
 @lru_cache(maxsize=None)
 def import_voice_converter():
@@ -188,90 +159,7 @@ def run_batch_infer_script(
     infer_pipeline.convert_audio_batch(**kwargs)
     return f"Files from {input_folder} inferred successfully."
 
-# TTS
-def run_tts_script(
-    tts_file: str,
-    tts_text: str,
-    tts_voice: str,
-    tts_rate: int,
-    pitch: int,
-    index_rate: float,
-    volume_envelope: int,
-    protect: float,
-    hop_length: int,
-    f0_method: str,
-    output_tts_path: str,
-    output_rvc_path: str,
-    pth_path: str,
-    index_path: str,
-    split_audio: bool,
-    f0_autotune: bool,
-    f0_autotune_strength: float,
-    clean_audio: bool,
-    clean_strength: float,
-    export_format: str,
-    f0_file: str,
-    embedder_model: str,
-    embedder_model_custom: str = None,
-    sid: int = 0,
-):
-    # Validate paths
-    if not os.path.exists(tts_file):
-        raise FileNotFoundError(f"TTS input file not found: {tts_file}")
-    if not os.path.exists(pth_path):
-        raise FileNotFoundError(f"Model file not found: {pth_path}")
-    if not os.path.exists(index_path):
-        raise FileNotFoundError(f"Index file not found: {index_path}")
-    os.makedirs(os.path.dirname(output_tts_path) or ".", exist_ok=True)
-    os.makedirs(os.path.dirname(output_rvc_path) or ".", exist_ok=True)
 
-    try:
-        tts_script_path = pkg_resources.resource_filename('bfrvc.lib.tools', 'tts.py')
-        if not os.path.exists(tts_script_path):
-            raise FileNotFoundError(f"TTS script not found: {tts_script_path}")
-    except Exception as e:
-        print(f"Error locating tts.py: {e}")
-        sys.exit(1)
-
-    if os.path.exists(output_tts_path):
-        os.remove(output_tts_path)
-
-    command_tts = [
-        str(python),
-        tts_script_path,
-        tts_file,
-        tts_text,
-        tts_voice,
-        str(tts_rate),
-        output_tts_path,
-    ]
-    subprocess.run(command_tts, check=True)
-    infer_pipeline = import_voice_converter()
-    infer_pipeline.convert_audio(
-        pitch=pitch,
-        index_rate=index_rate,
-        volume_envelope=volume_envelope,
-        protect=protect,
-        hop_length=hop_length,
-        f0_method=f0_method,
-        audio_input_path=output_tts_path,
-        audio_output_path=output_rvc_path,
-        model_path=pth_path,
-        index_path=index_path,
-        split_audio=split_audio,
-        f0_autotune=f0_autotune,
-        f0_autotune_strength=f0_autotune_strength,
-        clean_audio=clean_audio,
-        clean_strength=clean_strength,
-        export_format=export_format,
-        f0_file=f0_file,
-        embedder_model=embedder_model,
-        embedder_model_custom=embedder_model_custom,
-        sid=sid,
-    )
-    return f"Text {tts_text} synthesized successfully.", output_rvc_path.replace(
-        ".wav", f".{export_format.lower()}"
-    )
 
 # Download
 def run_download_script(model_link: str):
@@ -289,7 +177,7 @@ def run_prerequisites_script(
 
 # Parse arguments
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="BFRVC: Voice Conversion and TTS Tool")
+    parser = argparse.ArgumentParser(description="BF RVC Fork 😺")
     subparsers = parser.add_subparsers(title="parser", dest="command", help="Choose a mode")
 
     # Parser for 'infer' mode
@@ -348,21 +236,7 @@ def parse_arguments():
         "hybrid[rmvpe+fcpe]", "hybrid[crepe+rmvpe+fcpe]"], default="rmvpe")
     batch_infer_parser.add_argument("--input_folder", type=str, help="Path to the folder containing input audio files.", required=True)
     batch_infer_parser.add_argument("--output_folder", type=str, help="Path to the folder for saving output audio files.", required=True)
-    batch_infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)
-    batch_infer_parser.add_argument("--index_path", type=str, help=index_path_description, required=True)
-    batch_infer_parser.add_argument("--split_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=split_audio_description, default=False)
-    batch_infer_parser.add_argument("--f0_autotune", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=f0_autotune_description, default=False)
-    batch_infer_parser.add_argument("--f0_autotune_strength", type=float, help=f0_autotune_strength_description, choices=[i / 10 for i in range(11)], default=1.0)
-    batch_infer_parser.add_argument("--clean_audio", type=lambda x: bool(strtobool(x.lower())), choices=[True, False], help=clean_audio_description, default=False)
-    batch_infer_parser.add_argument("--clean_strength", type=float, help=clean_strength_description, choices=[i / 10 for i in range(11)], default=0.7)
-    batch_infer_parser.add_argument("--export_format", type=str, help=export_format_description, choices=["WAV", "MP3", "FLAC", "OGG", "M4A"], default="WAV")
-    batch_infer_parser.add_argument("--embedder_model", type=str, help=embedder_model_description, choices=[
-        "contentvec", "chinese-hubert-base", "japanese-hubert-base", "korean-hubert-base", "custom"], default="contentvec")
-    batch_infer_parser.add_argument("--embedder_model_custom", type=str, help=embedder_model_custom_description, default=None)
-    batch_infer_parser.add_argument("--f0_file", type=str, help=f0_file_description, default=None)
-    batch_infer_parser.add_argument("--sid", type=int, help=sid_description, default=0)
-
-    # Parser for 'tts' mode
+    batch_infer_parser.add_argument("--pth_path", type=str, help=pth_path_description, required=True)# Parser for 'tts' mode
     tts_parser = subparsers.add_parser("tts", help="Run TTS inference")
     tts_parser.add_argument("--tts_file", type=str, help="File with a text to be synthesized", required=True)
     tts_parser.add_argument("--tts_text", type=str, help="Text to be synthesized", required=True)
