@@ -18,10 +18,10 @@ from bfrvc.lib.algorithm.synthesizers import Synthesizer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("faiss").setLevel(logging.WARNING)
-logging.getLogger("faiss.loader").setLevel(logging.WARNING)
+# logging.getLogger("httpx").setLevel(logging.WARNING)
+# logging.getLogger("httpcore").setLevel(logging.WARNING)
+# logging.getLogger("faiss").setLevel(logging.WARNING)
+# logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
 # Base path for temporary files
 base_path = os.path.expanduser("~/.bfrvc")
