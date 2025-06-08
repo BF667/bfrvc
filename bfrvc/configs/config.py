@@ -3,6 +3,7 @@ import json
 import os
 import logging
 import pkg_resources
+import pathlib
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -62,7 +63,7 @@ class Config:
 
     def load_config_json(self):
         """
-        Load JSON configuration files from the package.
+        Load JSON configuration files from the package or local directory.
 
         Returns:
             dict: Dictionary mapping config file names to their contents.
@@ -72,13 +73,24 @@ class Config:
             json.JSONDecodeError: If a config file is invalid.
         """
         configs = {}
+        package_name = "bfrvc"
         for config_file in version_config_paths:
             try:
-                config_path = pkg_resources.resource_filename("bfrvc", config_file)
+                # Try loading from package resources
+                config_path = pkg_resources.resource_filename(package_name, config_file)
+                if not os.path.exists(config_path):
+                    # Fallback to local directory relative to this file
+                    base_dir = pathlib.Path(__file__).parent.parent
+                    config_path = base_dir / config_file
+                    if not config_path.exists():
+                        logging.error(f"Config file not found: {config_file} in package or local directory {config_path}")
+                        raise FileNotFoundError(f"Config file not found: {config_file}")
+                
                 with open(config_path, "r") as f:
                     configs[os.path.basename(config_file)] = json.load(f)
+                logging.info(f"Loaded config file: {config_file}")
             except FileNotFoundError:
-                logging.error(f"Config file not found: {config_file}. Ensure it is included in the package.")
+                logging.error(f"Config file not found: {config_file}. Ensure it is included in the package or local directory.")
                 raise
             except json.JSONDecodeError as error:
                 logging.error(f"Invalid JSON in {config_file}: {error}")
