@@ -13,7 +13,7 @@ from tempfile import gettempdir
 from bfrvc.configs.config import Config
 from bfrvc.unit.utils import load_audio_infer, load_embedding
 from bfrvc.unit.tools.split_audio import process_audio, merge_audio
-from bfrvc.unit.pipeline import Pipeline
+from bfrvc.infer.pipeline import Pipeline
 from bfrvc.unit.algorithm.synthesizers import Synthesizer
 
 # Configure logging
