@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name="bfrvc",
-    version="0.3.2",
+    version="0.4.2",
     description="A Retrieval-based Voice Conversion (RVC) fork",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="BF667",
     author_email="festyus09@gmail.com",
     license="MIT",
-    keywords=["voice-conversion", "tts", "audio-processing", "rvc", "machine-learning"],
+    keywords=["voice-conversion", "audio-processing", "rvc", "machine-learning"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
